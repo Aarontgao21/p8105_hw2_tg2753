@@ -2,7 +2,7 @@
 title: "P8105_hw2_tg2753"
 output: github_document
 ---
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(readxl)
 ```
@@ -51,7 +51,7 @@ the median number of sports balls in a dumpster in 2019 is `r median(pull(trashw
 
 ## Problem 2
 First, clean the data in pols-month.csv. Use separate() to break up the variable mon into integer variables year, month, and day; replace month number with month name; create a president variable taking values gop and dem, and remove prez_dem and prez_gop; and remove the day variable.
-```{r}
+```{r message=FALSE, warning=FALSE}
 pols = read_csv("./Dataset/pols-month.csv") %>% 
     separate(col = mon, into = c("year", "month", "day")) %>% 
     mutate(year = as.character(year),
@@ -63,7 +63,7 @@ pols = read_csv("./Dataset/pols-month.csv") %>%
 
 Second, clean the data in snp.csv using a similar process to the above. For consistency across datasets, arrange according to year and month, and organize so that year and month are the leading columns.
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 snp = read_csv("./Dataset/snp.csv") %>% 
     mutate(date = lubridate::mdy(date)) %>%
     separate(col = date, into = c("year", "month", "day")) %>% 
@@ -77,7 +77,7 @@ snp = read_csv("./Dataset/snp.csv") %>%
 ```
 
 Third, tidy the unemployment data so that it can be merged with the previous datasets. This process will involve switching from “wide” to “long” format; ensuring that key variables have the same name; and ensuring that key variables take the same values.
-```{r}
+```{r message=FALSE, warning=FALSE}
 unemployment = read_csv("./Dataset/unemployment.csv") %>% 
      pivot_longer(Jan:Dec,
                  names_to = "month",
@@ -90,18 +90,63 @@ unemployment = read_csv("./Dataset/unemployment.csv") %>%
     arrange(year,month)
 ```
 Join the datasets by merging snp into pols, and merging unemployment into the result.
-```{r}
+```{r message=FALSE, warning=FALSE}
 result = left_join(left_join(pols,snp),unemployment)
 ```
+`r knitr::kable(head(result))`
+`r knitr::kable(tail(result))`
 
-The dataset _**pols**_ has dimension of `r nrow(pols)` x `r ncol(pols)`. It shows the number of national politicians who are democratic or republican at any given time. Then range of years is `r min(range(pull(pols,year)))` - `r max(range(pull(pols,year)))`. The key variables in the _**pols**_ are: `r names(pols)`.
+ **pols** has  `r nrow(pols)` observations. It shows the number of national politicians who are democratic or republican at any given time. Then range of years is `r min(range(pull(pols,year)))` - `r max(range(pull(pols,year)))`. The key variables : `r names(pols[3:9])`.
 
-The dataset _**snp**_ has dimension of `r nrow(snp)` x `r ncol(snp)`. It shows the closing values of the S&P stock (Standard & Poor’s) index, which is often used as a representative measure of stock market as a whole. Then range of years is `r min(range(pull(snp,year)))` - `r max(range(pull(snp,year)))`. The key variables in the _**snp**_ are: `r names(snp)`.
+ **snp** has `r nrow(snp)` observations. It shows the closing values of the S&P stock (Standard & Poor’s) index, which is often used as a representative measure of stock market as a whole. Then range of years is `r min(range(pull(snp,year)))` - `r max(range(pull(snp,year)))`. The key variables are: `r names(snp[3])`.
 
-The dataset _**unemployment**_ has dimension of `r nrow(unemployment)` x `r ncol(unemployment)`. It shows the percentage of unemployment on the associated date. Then range of years is `r min(range(pull(unemployment,year)))` - `r max(range(pull(unemployment,year)))`. The key variables in the _**unemployment**_ are: `r names(unemployment)`.
+**unemployment** `r nrow(unemployment)` observations. It shows the percentage of unemployment on the associated date. Then range of years is `r min(range(pull(unemployment,year)))` - `r max(range(pull(unemployment,year)))`. The key variables are  `r names(unemployment[3])`.
 
-The resulting dataset, _**result**_, has dimension  is `r nrow(result)` x `r ncol(result)`. Then range of years is `r min(range(pull(result,year)))` - `r max(range(pull(result,year)))`. The key variables in the _**result**_ are: `r names(result)`.
+**result**, has  `r nrow(result)` observations. The range of years is `r min(range(pull(result,year)))` - `r max(range(pull(result,year)))`. The key variables  are: `r names(result[3:11])`.
 
 
 ## Problem 3
+Load and tidy the data
+```{r}
+baby_name = read_csv("./Dataset/Popular_Baby_Names.csv")%>% 
+    janitor::clean_names() %>%
+    distinct() %>%
+    mutate(
+        ethnicity = recode(ethnicity,
+                       "ASIAN AND PACI" = "ASIAN AND PACIFIC ISLANDER",
+                       "BLACK NON HISP" = "BLACK NON HISPANIC", 
+                       "WHITE NON HISP" = "WHITE NON HISPANIC"),
+        childs_first_name = str_to_title(childs_first_name)
+    )
+```
+
+Produce a well-structured, reader-friendly table showing the rank in popularity of the name “Olivia” as a female baby name over time; this should have rows for ethnicities and columns for year. Produce a similar table showing the most popular name among male children over time.
+
+```{r}
+olivia = filter(
+    baby_name, childs_first_name == "Olivia" & gender == "FEMALE") %>%
+    select(year_of_birth, ethnicity, rank) %>%
+    pivot_wider(names_from = "year_of_birth",values_from = "rank")
+```
+
+`r knitr::kable(olivia)`
+
+```{r}
+top_male_name = filter(baby_name, gender == "MALE" & rank == 1) %>%
+    select(year_of_birth, ethnicity, childs_first_name) %>% 
+    pivot_wider(names_from = "year_of_birth",
+                values_from ="childs_first_name")
+```
+
+`r knitr::kable(top_male_name)`
+
+for male, white non-hispanic children born in 2016, produce a scatter plot showing the number of children with a name (y axis) against the rank in popularity of that name (x axis).
+```{r}
+plot_df = filter(baby_name, 
+                 gender == "MALE", 
+                 ethnicity == "WHITE NON HISPANIC",
+                 year_of_birth == 2016)
+ggplot(plot_df, aes(x = rank, y = count)) + geom_point()
+
+```
 
