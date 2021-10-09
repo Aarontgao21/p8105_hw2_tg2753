@@ -107,7 +107,7 @@ result = left_join(left_join(pols,snp),unemployment)
 
 ## Problem 3
 Load and tidy the data
-```{r}
+```{r message=FALSE, warning=FALSE}
 baby_name = read_csv("./Dataset/Popular_Baby_Names.csv")%>% 
     janitor::clean_names() %>%
     distinct() %>%
